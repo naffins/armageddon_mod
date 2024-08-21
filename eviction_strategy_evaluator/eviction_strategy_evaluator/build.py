@@ -46,7 +46,8 @@ class Builder(object):
         if not os.path.exists(libflush_depend_dir):
             os.makedirs(libflush_depend_dir)
 
-        execute_command([
+
+        clean_cmd = [
             "make",
             "-C",
             libflush_srcdir,
@@ -56,9 +57,9 @@ class Builder(object):
             "DEVICE_CONFIGURATION=" + self.strategy_file,
             "USE_EVICTION=1",
             "clean"
-        ])
+        ]
 
-        execute_command([
+        build_cmd = [
             "make",
             "-C",
             libflush_srcdir,
@@ -67,7 +68,17 @@ class Builder(object):
             "DEPENDDIR=" + libflush_depend_dir,
             "DEVICE_CONFIGURATION=" + self.strategy_file,
             "USE_EVICTION=1"
-        ])
+        ]
+
+        for i in (clean_cmd, build_cmd):
+            if "time-source" in self.configuration['libflush']:
+                i.insert(-2, "TIME_SOURCE={}".format(self.configuration['libflush']['time-source']))
+            if "cc" in self.configuration['libflush']:
+                i.insert(-2, "CC={}".format(self.configuration['libflush']['cc']))
+
+        execute_command(clean_cmd)
+
+        execute_command(build_cmd)
 
     def build_executable(self):
         logger.info("Building executable...")
@@ -86,7 +97,7 @@ class Builder(object):
         if not os.path.exists(executable_depend_dir):
             os.makedirs(executable_depend_dir)
 
-        execute_command([
+        clean_cmd = [
             "make",
             "-C",
             executable_srcdir,
@@ -97,9 +108,9 @@ class Builder(object):
             "ARCH=" + architecture,
             "BUILDDIR=" + executable_build_dir,
             "clean"
-        ])
+        ]
 
-        execute_command([
+        build_cmd = [
             "make",
             "-C",
             executable_srcdir,
@@ -109,7 +120,15 @@ class Builder(object):
             "DEPENDDIR=" + executable_depend_dir,
             "ARCH=" + architecture,
             "BUILDDIR=" + executable_build_dir
-        ])
+        ]
+
+        for i in (clean_cmd, build_cmd):
+            if "cc" in self.configuration['libflush']:
+                i.insert(-2, "CC={}".format(self.configuration['libflush']['cc']))
+
+        execute_command(clean_cmd)
+
+        execute_command(build_cmd)
 
     def get_executable_path(self):
         executable_build_dir = os.path.join(self.build_dir, "executable")

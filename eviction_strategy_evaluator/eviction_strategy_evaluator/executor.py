@@ -28,106 +28,111 @@ class Executor(object):
             logger.info('Strategy logfile already exists.')
             return False
 
-        if 'adb-id' in self.device_configuration['device']:
-            return self.__run_android(local_executable, local_logfile, number_of_runs)
+        if 'ip-address' in self.device_configuration['device']:
+            return self.__run_remote(local_executable, local_logfile, number_of_runs)
         else:
             return self.__run_local(local_executable, local_logfile, number_of_runs)
 
-    def __run_android(self, local_executable, local_logfile, number_of_runs):
+    def __run_remote(self, local_executable, local_logfile, number_of_runs):
         remote_executeable_dir = self.device_configuration['device']['executable-directory']
         remote_executable = os.path.join(remote_executeable_dir, self.strategy.get_name())
         remote_logfile = os.path.join(remote_executeable_dir, self.strategy.get_name() + ".log")
-        adb_id = self.device_configuration['device']['adb-id']
+        ssh_key_path = self.device_configuration['device']['ssh-key-path']
+        remote_username = "{}@{}".format(
+            self.device_configuration['device']['username'],
+            self.device_configuration['device']['ip-address']
+        )
 
         # Upload
         logger.info("Uploading executable")
         execute_command([
-            "adb",
-            "-s", adb_id,
-            "push",
+            "scp",
+            "-i",
+            ssh_key_path,
             local_executable,
-            remote_executable
+            "{}:{}".format(
+                remote_username,
+                remote_executable
+            ),
         ])
 
         # Setting chmod
         logger.info("Setting change mode")
         execute_command([
-            "adb",
-            "-s", adb_id,
-            "shell",
-            "su",
-            "-c",
-            "'",
-            "chmod",
+            "ssh",
+            "-i",
+            ssh_key_path,
+            remote_username,
+            "-t",
+            "'chmod",
             "777",
             remote_executable,
-            "'"
-        ])
+            "'",
+        ], True)
 
         # Running
         logger.info("Running measurements")
         execute_command([
-            "adb",
-            "-s", adb_id,
-            "shell",
-            "su",
-            "-c",
-            "'",
-            remote_executable,
+            "ssh",
+            "-i",
+            ssh_key_path,
+            remote_username,
+            "-t",
+            "'{}".format(remote_executable),
             "-n", str(number_of_runs),
             "-c", "0",
             remote_logfile,
-            "'"
-        ])
+            "'",
+        ], True)
 
         execute_command([
-            "adb",
-            "-s", adb_id,
-            "shell",
-            "su",
-            "-c",
-            "'",
-            "chmod",
+            "ssh",
+            "-i",
+            ssh_key_path,
+            remote_username,
+            "-t",
+            "'chmod",
             "777",
             remote_logfile,
-            "'"
-        ])
+            "'",
+        ], True)
 
         # Running
         logger.info("Fetching results")
         execute_command([
-            "adb",
-            "-s", adb_id,
-            "pull",
-            remote_logfile,
+            "scp",
+            "-i",
+            ssh_key_path,
+            "{}:{}".format(
+                remote_username,
+                remote_logfile
+            ),
             local_logfile
         ])
 
         # Clean-up
         logger.info("Cleaning up")
         execute_command([
-            "adb",
-            "-s", adb_id,
-            "shell",
-            "su",
-            "-c",
-            "'",
-            "rm",
+            "ssh",
+            "-i",
+            ssh_key_path,
+            remote_username,
+            "-t",
+            "'rm",
             remote_executable,
-            "'"
-        ])
+            "'",
+        ], True)
 
         execute_command([
-            "adb",
-            "-s", adb_id,
-            "shell",
-            "su",
-            "-c",
-            "'",
-            "rm",
+            "ssh",
+            "-i",
+            ssh_key_path,
+            remote_username,
+            "-t",
+            "'rm",
             remote_logfile,
-            "'"
-        ])
+            "'",
+        ], True)
 
         return True
 

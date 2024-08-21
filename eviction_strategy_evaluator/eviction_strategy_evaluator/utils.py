@@ -5,8 +5,9 @@ import io
 logger = logging.getLogger('default')
 
 
-def execute_command(command):
-    proc = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def execute_command(command, shell=False):
+    if shell: command = " ".join(command)
+    proc = subprocess.Popen(command, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     debug = True
     if debug is True:
         for l in io.TextIOWrapper(proc.stdout, encoding='utf-8'):

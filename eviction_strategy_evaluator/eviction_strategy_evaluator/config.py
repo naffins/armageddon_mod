@@ -10,7 +10,7 @@ def check_subconfiguration(config, identifier, config_variables):
 
     if identifier not in config:
         invalid_configuration = True
-        logger.debug('No "cache" section in device configuration')
+        logger.debug('No {} section in device configuration'.format(identifier))
     elif not isinstance(config[identifier], Iterable):
         logger.debug('"%s" is no valid section in the device configuration', identifier)
         invalid_configuration = True
@@ -38,22 +38,24 @@ def parse_configuration(filename):
     invalid_configuration = False
 
     libflush_config_names = [
-        ('source-directory', str, True)
+        ('source-directory', str, True),
+        ('time-source',      str, False),
+        ('cc',               str, False)
     ]
 
-    invalid_configuration = check_subconfiguration(config, 'libflush', libflush_config_names)
+    invalid_configuration = invalid_configuration or check_subconfiguration(config, 'libflush', libflush_config_names)
 
     build_config_names = [
         ('directory', str, True)
     ]
 
-    invalid_configuration = check_subconfiguration(config, 'build', build_config_names)
+    invalid_configuration = invalid_configuration or check_subconfiguration(config, 'build', build_config_names)
 
     logs_config_names = [
         ('directory', str, True)
     ]
 
-    invalid_configuration = check_subconfiguration(config, 'logs', logs_config_names)
+    invalid_configuration = invalid_configuration or check_subconfiguration(config, 'logs', logs_config_names)
 
     if invalid_configuration is True:
         return None
@@ -74,19 +76,30 @@ def parse_device_configuration(filename):
         ('codename',             str, True),
         ('arch',                 str, True),
         ('threshold',            int, False),
-        ('adb-id',               str, False),
+        ('ip-address',           str, False),
+        ('ssh-key-path',         str, False),
+        ('username',             str, False),
         ('executable-directory', str, False),
-        ('log-directory',        str, False)
+        ('log-directory',        str, False),
     ]
 
-    invalid_configuration = check_subconfiguration(config, 'device', device_config_names)
+    invalid_configuration = invalid_configuration or check_subconfiguration(config, 'device', device_config_names)
+
+    if "ip-address" in config['device']:
+        remote_device_config_names = [
+            ('ssh-key-path',         str, True),
+            ('username',             str, True),
+            ('executable-directory', str, True),
+            ('log-directory',        str, True),
+        ]
+        invalid_configuration = invalid_configuration or check_subconfiguration(config, 'device', remote_device_config_names)
 
     cache_config_names = [
         ('number-of-sets', int, True),
         ('line-length',    int, True)
     ]
 
-    invalid_configuration = check_subconfiguration(config, 'cache', cache_config_names)
+    invalid_configuration = invalid_configuration or check_subconfiguration(config, 'cache', cache_config_names)
 
     if invalid_configuration is True:
         return None
